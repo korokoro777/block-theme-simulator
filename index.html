@@ -461,9 +461,9 @@
         padding: 0.75rem;
       }
 
-      .sidebar-preview-row {
+      /* .sidebar-preview-row {
         flex-direction: column;
-      }
+      } */
     }
   </style>
 </head>
@@ -589,8 +589,9 @@
                 <div class="mini-dot"></div>
                 <div class="mini-dot"></div>
               </div>
+              <div class="mini-header"><span>🏠 KORO</span></div>
               <div class="mini-site">
-                <div class="mini-header"><span>🏠 KORO</span></div>
+
                 <div class="mini-content" id="mini-content">
                   <div class="mini-main">
                     <div class="mini-block mini-h2">見出し</div>
@@ -599,6 +600,7 @@
                   </div>
                 </div>
               </div>
+               <div class="mobile-footer-inner"><span>© 2026 KORO</span></div>
             </div>
           </div>
 
@@ -875,7 +877,7 @@ CSSの max-width に相当する設定です。
       },
       sidebar: {
         title: '📋 columnsブロック とは？',
-        text: 'CSSの display:flex に相当するブロックです。\nスマホ（600px未満）では自動で縦積みになります。\nメディアクエリは不要です！\n右のミニプレビューでPC/スマホの違いを確認してください。\nなお、左サイドバーに変える場合でも、基本的にカラムは本文を上にして、スマホでサイドバーを下にする。\nその為、flex-direction: row-reverse;を追加（CSSが必要）。'
+        text: 'CSSの display:flex に相当するブロックです。\nスマホ（600px未満）では自動で縦積みになります。\nメディアクエリは不要です！\n右のミニプレビューでPC/スマホの違いを確認してください。\n左サイドバーに変える場合も、通常カラムは本文を上にして、スマホでサイドバーを下にする。\nその為、flex-direction: row-reverse;を追加（CSSが必要）。'
       },
       sidebarWidth: {
         title: '📋 サイドバーの幅',
