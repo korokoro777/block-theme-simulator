@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ブロックテーマ レイアウトシミュレーター</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --teal: #4a7c7e;
+      --teal-light: #e8f4f4;
+      --teal-dark: #3a6c6e;
+      --terra: #c8956c;
+      --terra-light: #fdf0e8;
+      --text: #2c2c2c;
+      --muted: #888;
+      --bg: #faf8f5;
+      --white: #fff;
+      --border: #e0dcd8;
+      --purple-light: #f3eef8;
+      --purple: #9b6fc7;
+    }
+
+    body {
+      font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic Pro", "メイリオ", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      grid-template-rows: 52px 1fr;
+    }
+
+    /* ヘッダー */
+    .app-header {
+      grid-column: 1 / -1;
+      background: var(--teal);
+      display: flex;
+      align-items: center;
+      padding: 0 1.5rem;
+      gap: 1rem;
+    }
+    .app-header h1 { color: #fff; font-size: 0.9rem; font-weight: 600; }
+    .app-header .badge {
+      background: rgba(255,255,255,0.2);
+      color: #fff;
+      font-size: 0.7rem;
+      padding: 2px 8px;
+      border-radius: 100px;
+    }
+
+    /* コントロールパネル */
+    .controls {
+      background: var(--white);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* アコーディオン */
+    .accordion {
+      border-bottom: 1px solid var(--border);
+    }
+
+    .accordion-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 1rem;
+      cursor: pointer;
+      background: var(--white);
+      user-select: none;
+      transition: background 0.15s;
+    }
+
+    .accordion-header:hover { background: var(--teal-light); }
+    .accordion-header.active { background: var(--teal-light); }
+
+    .accordion-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--teal);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .accordion-arrow {
+      font-size: 0.7rem;
+      color: var(--muted);
+      transition: transform 0.2s;
+    }
+
+    .accordion-header.active .accordion-arrow { transform: rotate(180deg); }
+
+    .accordion-body {
+      display: none;
+      padding: 0.85rem 1rem;
+      border-top: 1px solid var(--border);
+      background: #fdfcfb;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+
+    .accordion-body.open { display: flex; }
+
+    /* コントロール部品 */
+    .control-item label {
+      display: block;
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .value-display { font-weight: 700; color: var(--teal); }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--teal);
+      cursor: pointer;
+    }
+
+    .toggle-group {
+      display: flex;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .toggle-group button {
+      flex: 1;
+      border: none;
+      background: var(--white);
+      padding: 6px 4px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      color: var(--muted);
+      transition: all 0.15s;
+    }
+
+    .toggle-group button.active {
+      background: var(--teal);
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .code-preview {
+      background: #f4f4f4;
+      border-radius: 6px;
+      padding: 0.6rem 0.75rem;
+      font-family: monospace;
+      font-size: 0.7rem;
+      color: #444;
+      line-height: 1.6;
+      white-space: pre;
+      overflow-x: auto;
+    }
+
+    .code-preview .key { color: var(--teal); }
+    .code-preview .val { color: var(--terra); }
+
+    /* プレビューエリア */
+    .preview-area {
+      overflow: auto;
+      padding: 1.25rem;
+      background: #eceae6;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .preview-label {
+      font-size: 0.72rem;
+      color: var(--muted);
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    /* ブラウザフレーム */
+    .browser-frame {
+      background: #e0dcd8;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+    }
+
+    .browser-bar {
+      background: #d0ccc8;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      padding: 0 1rem;
+      gap: 6px;
+    }
+
+    .browser-dot { width: 9px; height: 9px; border-radius: 50%; }
+    .browser-dot:nth-child(1) { background: #ff5f57; }
+    .browser-dot:nth-child(2) { background: #febc2e; }
+    .browser-dot:nth-child(3) { background: #28c840; }
+
+    .browser-url {
+      background: #fff;
+      border-radius: 4px;
+      padding: 2px 10px;
+      font-size: 0.7rem;
+      color: var(--muted);
+      flex: 1;
+      margin-left: 0.5rem;
+    }
+
+    /* サイトプレビュー */
+    .site-preview {
+      background: var(--white);
+      min-height: 360px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .site-header-preview {
+      background: var(--teal);
+      padding: 0.65rem 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .site-header-preview .logo { color: #fff; font-weight: 700; font-size: 0.85rem; }
+    .site-header-preview .nav { display: flex; gap: 1rem; }
+    .site-header-preview .nav span { color: rgba(255,255,255,0.8); font-size: 0.75rem; }
+
+    .site-body {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      background: var(--bg);
+      overflow: hidden;
+    }
+
+    /* wide-wrapper（wideSizeの外枠） */
+    .site-wide-wrapper {
+      width: 100%;
+      max-width: 1000px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+      transition: all 0.3s ease;
+    }
+
+    /* content-wrapper（contentSizeの内枠） */
+    .site-content-wrapper {
+      width: 100%;
+      max-width: 780px;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      transition: all 0.3s ease;
+    }
+
+    .site-content-wrapper.has-sidebar {
+      flex-direction: row;
+      max-width: 100%;
+    }
+
+    /* 左サイドバー用の追加クラス */
+    .site-content-wrapper.sidebar-left {
+      flex-direction: row-reverse;
+    }
+
+    .site-main {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      padding: 0.75rem;
+    }
+
+    .site-sidebar {
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    /* ブロック */
+    .block { border-radius: 5px; transition: all 0.3s ease; }
+
+    .block-full {
+      width: 100%;
+      background: var(--teal-dark);
+      padding: 1rem;
+      text-align: center;
+      transition: all 0.3s ease;
+    }
+
+    .block-full p { color: #fff; font-size: 0.8rem; font-weight: 700; margin: 0; }
+    .block-full small { color: rgba(255,255,255,0.7); font-size: 0.7rem; }
+
+    .block-wide {
+      width: 100%;
+      background: #c8d8d9;
+      padding: 0.6rem 1rem;
+      text-align: center;
+    }
+
+    .block-wide p { color: var(--teal-dark); font-size: 0.78rem; font-weight: 700; margin: 0; }
+    .block-wide small { color: #5a8c8e; font-size: 0.68rem; }
+
+    .block-h2 {
+      background: var(--teal);
+      color: #fff;
+      padding: 0.45rem 0.85rem;
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+
+    .block-p {
+      background: var(--white);
+      border: 1px solid var(--border);
+      padding: 0.6rem 0.85rem;
+      font-size: 0.75rem;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    .block-summary {
+      background: #eef6f0;
+      border-left: 3px solid var(--teal);
+      padding: 0.6rem 0.85rem;
+      font-size: 0.75rem;
+      color: #2c6e3a;
+    }
+
+    .block-sidebar-widget {
+      background: var(--purple-light);
+      border-radius: 5px;
+      padding: 0.65rem 0.75rem;
+    }
+
+    .widget-title { font-size: 0.72rem; font-weight: 700; color: var(--purple); margin-bottom: 0.4rem; }
+    .widget-item { font-size: 0.7rem; color: #5a2a8a; padding: 2px 0; border-bottom: 1px solid rgba(155,111,199,0.2); }
+
+    .site-footer-preview {
+      background: var(--terra);
+      padding: 0.5rem 1rem;
+      text-align: center;
+    }
+
+    .site-footer-preview p { color: rgba(255,255,255,0.9); font-size: 0.7rem; }
+
+    /* サイドバーセクションのプレビュー（アコーディオン内） */
+    .sidebar-preview-row {
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-start;
+    }
+
+    .sidebar-mini-preview {
+      flex: 1;
+    }
+
+    .sidebar-mini-label {
+      font-size: 0.7rem;
+      color: var(--muted);
+      font-weight: 700;
+      margin-bottom: 0.35rem;
+    }
+
+    .mini-browser {
+      background: #e0dcd8;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .mini-bar {
+      background: #d0ccc8;
+      height: 18px;
+      display: flex;
+      align-items: center;
+      padding: 0 0.5rem;
+      gap: 3px;
+    }
+
+    .mini-dot { width: 5px; height: 5px; border-radius: 50%; }
+    .mini-dot:nth-child(1) { background: #ff5f57; }
+    .mini-dot:nth-child(2) { background: #febc2e; }
+    .mini-dot:nth-child(3) { background: #28c840; }
+
+    .mini-site { background: var(--bg); padding: 0.4rem; }
+    .mini-header { background: var(--teal); padding: 3px 6px; border-radius: 3px; margin-bottom: 3px; }
+    .mini-header span { color: #fff; font-size: 0.6rem; font-weight: 700; }
+    .mini-content { display: flex; gap: 3px; }
+    .mini-main { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+    .mini-block { border-radius: 2px; padding: 3px 5px; font-size: 0.55rem; }
+    .mini-h2 { background: var(--teal); color: #fff; font-weight: 700; }
+    .mini-p { background: var(--white); color: var(--muted); border: 0.5px solid var(--border); line-height: 1.3; }
+    .mini-side { background: var(--purple-light); border-radius: 2px; padding: 3px 5px; font-size: 0.55rem; color: var(--purple); font-weight: 700; }
+    .mini-footer { background: var(--terra); padding: 3px; text-align: center; border-radius: 2px; margin-top: 3px; }
+    .mini-footer span { color: #fff; font-size: 0.5rem; }
+
+    /* スマホプレビュー（アコーディオン内） */
+    .mobile-frame {
+      background: #e0dcd8;
+      border-radius: 10px;
+      overflow: hidden;
+      width: 100%;
+    }
+
+    .mobile-notch {
+      background: #d0ccc8;
+      height: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .mobile-notch-bar { width: 40px; height: 4px; background: #b8b4af; border-radius: 2px; }
+
+    .mobile-site-inner { background: var(--white); }
+    .mobile-header-inner { background: var(--teal); padding: 4px 8px; }
+    .mobile-header-inner span { color: #fff; font-size: 0.65rem; font-weight: 700; }
+    .mobile-body-inner { padding: 4px; display: flex; flex-direction: column; gap: 3px; background: var(--bg); }
+    .mobile-block-inner { border-radius: 3px; }
+    .mobile-h2-inner { background: var(--teal); color: #fff; padding: 3px 6px; font-size: 0.62rem; font-weight: 700; }
+    .mobile-p-inner { background: var(--white); border: 0.5px solid var(--border); padding: 3px 6px; font-size: 0.58rem; color: var(--muted); line-height: 1.4; }
+    .mobile-side-inner { background: var(--purple-light); padding: 4px 6px; font-size: 0.6rem; color: var(--purple); font-weight: 700; }
+    .mobile-footer-inner { background: var(--terra); padding: 4px; text-align: center; }
+    .mobile-footer-inner span { color: #fff; font-size: 0.58rem; }
+
+    /* 説明パネル */
+    .info-panel {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.85rem 1.1rem;
+    }
+
+    .info-panel h3 { font-size: 0.8rem; font-weight: 700; color: var(--teal); margin-bottom: 0.4rem; }
+    .info-panel p { font-size: 0.78rem; color: var(--muted); line-height: 1.7; white-space: pre-wrap; }
+
+    /* =========================================
+       📱 スマホ用のレスポンシブ対応
+       ========================================= */
+    @media (max-width: 768px) {
+      body {
+        grid-template-columns: 1fr;
+        grid-template-rows: 52px auto 1fr;
+      }
+
+      .controls {
+        border-right: none;
+        border-bottom: 2px solid var(--teal);
+        max-height: 40vh;
+      }
+
+      .preview-area {
+        padding: 0.75rem;
+      }
+
+      .sidebar-preview-row {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<header class="app-header">
+  <h1>🧩 ブロックテーマ レイアウトシミュレーター</h1>
+  <span class="badge">theme.json を動かして確認</span>
+</header>
+
+<aside class="controls">
+
+  <div class="accordion">
+    <div class="accordion-header active" onclick="toggleAccordion(this)">
+      <span class="accordion-title">📐 本文の最大幅（contentSize）</span>
+      <span class="accordion-arrow">▼</span>
+    </div>
+    <div class="accordion-body open">
+      <div class="control-item">
+        <label>幅 → <span class="value-display" id="content-size-label">780px</span></label>
+        <input type="range" min="500" max="1000" value="780" step="10"
+          oninput="updateContentSize(this.value)">
+      </div>
+      <div class="code-preview" id="content-size-code"><span class="key">"layout"</span>: {
+  <span class="key">"contentSize"</span>: <span class="val">"780px"</span>
+}</div>
+    </div>
+  </div>
+
+  <div class="accordion">
+    <div class="accordion-header" onclick="toggleAccordion(this)">
+      <span class="accordion-title">🖼️ 幅広ブロック（wideSize）</span>
+      <span class="accordion-arrow">▼</span>
+    </div>
+    <div class="accordion-body">
+      <div class="control-item">
+        <label>幅 → <span class="value-display" id="wide-size-label">1000px</span></label>
+        <input type="range" min="600" max="1200" value="1000" step="10"
+          oninput="updateWideSize(this.value)">
+      </div>
+      <div class="code-preview" id="wide-size-code"><span class="key">"layout"</span>: {
+  <span class="key">"wideSize"</span>: <span class="val">"1000px"</span>
+}</div>
+    </div>
+  </div>
+
+  <div class="accordion">
+    <div class="accordion-header" onclick="toggleAccordion(this)">
+      <span class="accordion-title">🌕 全幅ブロック（alignfull）</span>
+      <span class="accordion-arrow">▼</span>
+    </div>
+    <div class="accordion-body">
+      <div class="control-item">
+        <label>表示切り替え</label>
+        <div class="toggle-group">
+          <button onclick="setFullWidth(false, this)">非表示</button>
+          <button class="active" onclick="setFullWidth(true, this)">表示する</button>
+        </div>
+      </div>
+      <p style="font-size:0.75rem;color:var(--muted);line-height:1.7;">
+        ヒーローセクションなど画面の<strong style="color:var(--teal);">端から端まで100%</strong>に広がるブロックです。<br>
+        CSSのネガティブマージンが不要になります！
+      </p>
+      <div class="code-preview"><span class="key">/* エディターで設定するだけ */</span>
+配置 → <span class="val">「全幅」</span>を選択
+
+<span class="key">/* theme.jsonで必要な設定 */</span>
+<span class="val">"useRootPaddingAwareAlignments"</span>: true</div>
+    </div>
+  </div>
+
+  <div class="accordion">
+    <div class="accordion-header" onclick="toggleAccordion(this)">
+      <span class="accordion-title">↕️ ブロック間の余白（blockGap）</span>
+      <span class="accordion-arrow">▼</span>
+    </div>
+    <div class="accordion-body">
+      <div class="control-item">
+        <label>余白 → <span class="value-display" id="block-gap-label">1.5rem</span></label>
+        <input type="range" min="0.25" max="4" value="1.5" step="0.25"
+          oninput="updateBlockGap(this.value)">
+      </div>
+      <div class="code-preview" id="block-gap-code"><span class="key">"spacing"</span>: {
+  <span class="key">"blockGap"</span>: <span class="val">"1.5rem"</span>
+}</div>
+    </div>
+  </div>
+
+  <div class="accordion">
+    <div class="accordion-header" onclick="toggleAccordion(this)">
+      <span class="accordion-title">📋 サイドバー（columnsブロック）</span>
+      <span class="accordion-arrow">▼</span>
+    </div>
+    <div class="accordion-body">
+      <div class="control-item">
+        <label>表示切り替え</label>
+        <div class="toggle-group">
+          <button class="active" onclick="setSidebar('none', this)">なし</button>
+          <button onclick="setSidebar('right', this)">あり（右）</button>
+          <button onclick="setSidebar('left', this)">あり（左）</button>
+        </div>
+      </div>
+
+      <div id="sidebar-width-control" style="display:none;">
+        <div class="control-item">
+          <label>サイドバーの幅 → <span class="value-display" id="sidebar-width-label">30%</span></label>
+          <input type="range" min="20" max="40" value="30" step="5"
+            oninput="updateSidebarWidth(this.value)">
+        </div>
+        <div class="code-preview" id="sidebar-code"><span class="key">wp:column</span> {
+  <span class="key">"width"</span>: <span class="val">"30%"</span>
+}</div>
+      </div>
+
+      <div>
+        <div class="sidebar-mini-label" style="margin-bottom:0.5rem;">👀 PC / スマホ 表示比較</div>
+        <div class="sidebar-preview-row">
+          <div class="sidebar-mini-preview">
+            <div class="sidebar-mini-label">🖥️ PC（600px以上）</div>
+            <div class="mini-browser">
+              <div class="mini-bar">
+                <div class="mini-dot"></div>
+                <div class="mini-dot"></div>
+                <div class="mini-dot"></div>
+              </div>
+              <div class="mini-site">
+                <div class="mini-header"><span>🏠 KORO</span></div>
+                <div class="mini-content" id="mini-content">
+                  <div class="mini-main">
+                    <div class="mini-block mini-h2">見出し</div>
+                    <div class="mini-block mini-p">本文テキストが入ります。</div>
+                    <div class="mini-block mini-p" style="background:#eef6f0;color:#2c6e3a;border-color:#b8dfc0;">✅ まとめ</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="sidebar-mini-preview">
+            <div class="sidebar-mini-label">📱 スマホ（自動縦積み）</div>
+            <div class="mobile-frame">
+              <div class="mobile-notch"><div class="mobile-notch-bar"></div></div>
+              <div class="mobile-site-inner">
+                <div class="mobile-header-inner"><span>🏠 KORO</span></div>
+                <div class="mobile-body-inner">
+                  <div class="mobile-block-inner mobile-h2-inner">見出し</div>
+                  <div class="mobile-block-inner mobile-p-inner">本文テキストが入ります。</div>
+                  <div class="mobile-block-inner mobile-p-inner" style="background:#eef6f0;color:#2c6e3a;">✅ まとめ</div>
+                  <div class="mobile-block-inner mobile-side-inner" id="mobile-side-block" style="display:none;">📋 サイドバー（縦積み）</div>
+                </div>
+                <div class="mobile-footer-inner"><span>© 2026 KORO</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p style="font-size:0.72rem;color:var(--muted);margin-top:0.5rem;line-height:1.6;">
+          600px未満で自動縦積み。<br>メディアクエリ不要！
+        </p>
+      </div>
+
+    </div>
+  </div>
+
+</aside>
+
+<main class="preview-area">
+  <div class="browser-frame">
+    <div class="browser-bar">
+      <div class="browser-dot"></div>
+      <div class="browser-dot"></div>
+      <div class="browser-dot"></div>
+      <div class="browser-url">https://koro-koro.com/</div>
+    </div>
+    <div class="site-preview">
+      <div class="site-header-preview">
+        <div class="logo">🏠 KORO</div>
+        <div class="nav">
+          <span>WEB制作</span>
+          <span>歴史ロマン</span>
+          <span>旅行</span>
+        </div>
+      </div>
+
+      <div class="site-body">
+        <div class="site-wide-wrapper" id="wide-wrapper">
+
+          <div class="block-full" id="full-block" style="width:200%;">
+            <p>🌕 全幅ブロック（alignfull）</p>
+            <small>画面の端から端まで100% ← ヒーローセクションなどに使う</small>
+          </div>
+
+          <div class="site-content-wrapper" id="content-wrapper">
+            <div class="site-main" id="site-main">
+              <div class="block block-h2">theme.jsonって何をするファイル？</div>
+              <div class="block block-p">CSSで書いていたレイアウトの設定が、theme.jsonひとつに集約されます。色・フォント・余白・幅…すべてここで管理します。</div>
+              <div class="block block-summary">✅ まとめ：contentSizeを設定するだけで本文の幅が自動で整います！</div>
+            </div>
+            <div class="site-sidebar" id="site-sidebar" style="display:none;width:30%;">
+              <div class="block-sidebar-widget">
+                <div class="widget-title">📂 カテゴリー</div>
+                <div class="widget-item">💻 WEB制作</div>
+                <div class="widget-item">🏯 歴史ロマン</div>
+                <div class="widget-item">✈️ 旅行</div>
+              </div>
+              <div class="block-sidebar-widget">
+                <div class="widget-title">📝 最新記事</div>
+                <div class="widget-item">theme.jsonの使い方</div>
+                <div class="widget-item">register_block_style</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="block-wide" id="wide-block" style="width:100%;">
+            <p>🖼️ 幅広ブロック（wideSize幅で表示）</p>
+            <small>contentSizeより広い！画像やテーブルをここに置く</small>
+          </div>
+
+          <div class="site-content-wrapper" id="content-wrapper2">
+            <div class="site-main">
+              <div class="block block-p">ブロックテーマでは、CSSのmax-widthをtheme.jsonのcontentSizeで置き換えます。幅広ブロックはwideSizeまで広がります。</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="site-footer-preview">
+        <p>© 2026 KORO All Rights Reserved.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="info-panel" id="info-panel">
+    <h3>📐 contentSize とは？</h3>
+    <p>スライダーを動かすと本文エリアの最大幅が変わります。
+CSSの max-width に相当する設定です。
+狭くすると読みやすく、広くすると情報量が増えます。</p>
+  </div>
+
+</main>
+
+<script>
+  var hasSidebar = false;
+  var hasFullWidth = true;
+  var contentSize = 780;
+  var wideSize = 1000;
+  var blockGap = 1.5;
+  var sidebarWidth = 30;
+
+  function toggleAccordion(header) {
+    var body = header.nextElementSibling;
+    var isOpen = body.classList.contains('open');
+    body.classList.toggle('open', !isOpen);
+    header.classList.toggle('active', !isOpen);
+  }
+
+  function updateContentSize(val) {
+    contentSize = parseInt(val);
+    document.getElementById('content-size-label').textContent = val + 'px';
+    document.getElementById('content-size-code').innerHTML =
+      '<span class="key">"layout"</span>: {\n  <span class="key">"contentSize"</span>: <span class="val">"' + val + 'px"</span>\n}';
+    applyStyles();
+    updateInfo('contentSize', val);
+  }
+
+  function updateWideSize(val) {
+    wideSize = parseInt(val);
+    document.getElementById('wide-size-label').textContent = val + 'px';
+    document.getElementById('wide-size-code').innerHTML =
+      '<span class="key">"layout"</span>: {\n  <span class="key">"wideSize"</span>: <span class="val">"' + val + 'px"</span>\n}';
+    applyStyles();
+    updateInfo('wideSize', val);
+  }
+
+  function updateBlockGap(val) {
+    blockGap = parseFloat(val);
+    document.getElementById('block-gap-label').textContent = val + 'rem';
+    document.getElementById('block-gap-code').innerHTML =
+      '<span class="key">"spacing"</span>: {\n  <span class="key">"blockGap"</span>: <span class="val">"' + val + 'rem"</span>\n}';
+    applyStyles();
+    updateInfo('blockGap', val);
+  }
+
+  function setFullWidth(show, btn) {
+    hasFullWidth = show;
+    btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    var fullBlock = document.getElementById('full-block');
+    fullBlock.style.display = show ? 'block' : 'none';
+    updateInfo('fullWidth', show);
+  }
+
+  function setSidebar(type, btn) {
+    hasSidebar = (type !== 'none');
+
+    btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    var sidebarEl = document.getElementById('site-sidebar');
+    var widthControl = document.getElementById('sidebar-width-control');
+    var wrapper = document.getElementById('content-wrapper');
+    var miniContent = document.getElementById('mini-content');
+    var mobileSide = document.getElementById('mobile-side-block');
+
+    wrapper.classList.remove('has-sidebar', 'sidebar-left');
+
+    if (hasSidebar) {
+      sidebarEl.style.display = 'flex';
+      widthControl.style.display = 'block';
+      wrapper.classList.add('has-sidebar');
+      mobileSide.style.display = 'block';
+
+      if (type === 'left') {
+        wrapper.classList.add('sidebar-left');
+      }
+
+      if (!document.getElementById('mini-sidebar')) {
+        var miniSide = document.createElement('div');
+        miniSide.id = 'mini-sidebar';
+        miniSide.className = 'mini-side';
+        miniSide.style.cssText = 'flex-shrink:0;width:35%;';
+        miniSide.textContent = '📋 SIDE';
+        miniContent.appendChild(miniSide);
+      } else {
+        document.getElementById('mini-sidebar').style.display = 'block';
+      }
+
+      var msWrapper = document.getElementById('mini-content');
+      if (type === 'left') {
+        msWrapper.style.flexDirection = 'row-reverse';
+      } else {
+        msWrapper.style.flexDirection = 'row';
+      }
+
+    } else {
+      sidebarEl.style.display = 'none';
+      widthControl.style.display = 'none';
+      mobileSide.style.display = 'none';
+      var ms = document.getElementById('mini-sidebar');
+      if (ms) ms.style.display = 'none';
+    }
+    applyStyles();
+    updateInfo('sidebar', type);
+  }
+
+  function updateSidebarWidth(val) {
+    sidebarWidth = parseInt(val);
+    document.getElementById('sidebar-width-label').textContent = val + '%';
+    document.getElementById('sidebar-code').innerHTML =
+      '<span class="key">wp:column</span> {\n  <span class="key">"width"</span>: <span class="val">"' + val + '%"</span>\n}';
+    document.getElementById('site-sidebar').style.width = val + '%';
+    var ms = document.getElementById('mini-sidebar');
+    if (ms) ms.style.width = val + '%';
+    updateInfo('sidebarWidth', val);
+  }
+
+  function applyStyles() {
+    var wideWrapper = document.getElementById('wide-wrapper');
+    var wrapper = document.getElementById('content-wrapper');
+    var wrapper2 = document.getElementById('content-wrapper2');
+    var main = document.getElementById('site-main');
+    var sidebar = document.getElementById('site-sidebar');
+
+    var VIRTUAL_MAX = 1200;
+
+    var wideRatio = (wideSize / VIRTUAL_MAX) * 100;
+    var contentRatio = (contentSize / wideSize) * 100;
+
+    wideWrapper.style.width = wideRatio + '%';
+    wideWrapper.style.maxWidth = '100%';
+    wideWrapper.style.gap = blockGap + 'rem';
+
+    if (hasSidebar) {
+      wrapper.style.width = '100%';
+      wrapper.style.maxWidth = '100%';
+    } else {
+      wrapper.style.width = Math.min(contentRatio, 100) + '%';
+      wrapper.style.maxWidth = '100%';
+    }
+
+    if (wrapper2) {
+      wrapper2.style.width = Math.min(contentRatio, 100) + '%';
+      wrapper2.style.maxWidth = '100%';
+    }
+
+    wrapper.style.gap = blockGap + 'rem';
+    main.style.gap = blockGap + 'rem';
+    if (sidebar) sidebar.style.gap = blockGap + 'rem';
+  }
+
+  function updateInfo(type, val) {
+    var panel = document.getElementById('info-panel');
+    var messages = {
+      contentSize: {
+        title: '📐 contentSize とは？',
+        text: 'スライダーを動かすと本文エリアの最大幅が変わります。\nCSSの max-width に相当する設定です。\n狭くすると読みやすく、広くすると情報量が増えます。'
+      },
+      wideSize: {
+        title: '🖼️ wideSize とは？',
+        text: '「幅広」に設定したブロックの最大幅です。\ncontentSizeより広くすることで、画像だけ大きく見せることができます。\nプレビューの青い帯がwideSize幅で表示されています。'
+      },
+      blockGap: {
+        title: '↕️ blockGap とは？',
+        text: 'ブロックとブロックの間の余白です。\nCSSの margin-bottom に相当します。\nこれひとつで全ブロックの間隔が一括で変わります！'
+      },
+      fullWidth: {
+        title: '🌕 全幅（alignfull）とは？',
+        text: '画面の端から端まで100%に広がるブロックです。\nCSSではネガティブマージンが必要でしたが、\nエディターで「配置 → 全幅」を選ぶだけでOKです！\nuseRootPaddingAwareAlignments: true が必須です。'
+      },
+      sidebar: {
+        title: '📋 columnsブロック とは？',
+        text: 'CSSの display:flex に相当するブロックです。\nスマホ（600px未満）では自動で縦積みになります。\nメディアクエリは不要です！\n右のミニプレビューでPC/スマホの違いを確認してください。\nなお、左サイドバーに変える場合は、\nflex-direction: row-reverse;を追加（CSSが必要）。'
+      },
+      sidebarWidth: {
+        title: '📋 サイドバーの幅',
+        text: 'wp:column の width で指定します。\nCSSの flex-basis に相当します。\n残りの幅（' + (100 - parseInt(val || 30)) + '%）がメインコンテンツに\n自動で割り当てられます。'
+      }
+    };
+
+    if (messages[type]) {
+      panel.querySelector('h3').textContent = messages[type].title;
+      panel.querySelector('p').textContent = messages[type].text;
+    }
+  }
+
+  applyStyles();
+</script>
+</body>
+</html>
